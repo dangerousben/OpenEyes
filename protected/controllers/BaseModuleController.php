@@ -102,14 +102,4 @@ class BaseModuleController extends BaseController {
 		}
 		return parent::beforeAction($action);
 	}
-
-	/**
-	 * Whether the current user is allowed to call print actions
-	 *
-	 * @return boolean
-	 */
-	public function canPrint()
-	{
-		return BaseController::checkUserLevel(3);
-	}
 }
