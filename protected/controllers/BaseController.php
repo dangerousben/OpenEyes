@@ -31,45 +31,6 @@ class BaseController extends Controller
 	public $jsVars = array();
 	protected $css = array();
 
-	/**
-	 * Check to see if user's level is high enough
-	 * @param integer $level
-	 * @return boolean
-	 */
-	public static function checkUserLevel($level)
-	{
-		if ($user = Yii::app()->user) {
-			return ($user->access_level >= $level);
-		} else {
-			return false;
-		}
-	}
-
-	/**
-	 * Check if current user can create event of the given type
-	 *
-	 * @param EventType $event_type
-	 * @return boolean
-	 */
-	public function canCreateEventType($event_type)
-	{
-		$firm = Firm::model()->findByPk(Yii::app()->session['selected_firm_id']);
-		if (!$firm->service_subspecialty_assignment_id) {
-			// firm is a support services firm, which are restricted to only certain event types
-			if (!$event_type->support_services) {
-				return false;
-			}
-		}
-
-		if (self::checkUserLevel(5)) {
-			return true;
-		}
-		if (self::checkUserLevel(4) && $event_type->class_name != 'OphDrPrescription') {
-			return true;
-		}
-		return false;
-	}
-
 	public function filters()
 	{
 		return array('accessControl');
