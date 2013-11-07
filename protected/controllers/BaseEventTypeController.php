@@ -46,10 +46,15 @@ class BaseEventTypeController extends BaseController
 
 	/**
 	 * Checks to see if current user can create an event type
+	 *
 	 * @param EventType $event_type
+	 * @return bool
+	 * @deprecated use BaseController::CanCreateEventType
 	 */
 	public function checkEventAccess($event_type)
 	{
+		return $this->canCreateEventType($event_type);
+
 		$firm = Firm::model()->findByPk(Yii::app()->session['selected_firm_id']);
 		if (!$firm->service_subspecialty_assignment_id) {
 			if (!$event_type->support_services) {
@@ -66,6 +71,11 @@ class BaseEventTypeController extends BaseController
 		return false;
 	}
 
+	/**
+	 * Get the accessRules array for the controller
+	 *
+	 * @return array
+	 */
 	public function accessRules()
 	{
 		return array(
@@ -88,6 +98,7 @@ class BaseEventTypeController extends BaseController
 
 	/**
 	 * Whether the current user is allowed to call print actions
+	 *
 	 * @return boolean
 	 */
 	public function canPrint()
@@ -95,6 +106,9 @@ class BaseEventTypeController extends BaseController
 		return BaseController::checkUserLevel(3);
 	}
 
+	/**
+	 * Renders the metadata of the event with the standard template
+	 */
 	public function renderEventMetadata()
 	{
 		$this->renderPartial('//patient/event_metadata');
@@ -105,11 +119,24 @@ class BaseEventTypeController extends BaseController
 		$this->render('index');
 	}
 
+	/**
+	 * define the name of the actions that are print actions (for checking access based on print rules)
+	 *
+	 * @return array
+	 */
 	public function printActions()
 	{
 		return array('print');
 	}
 
+	/**
+	 * setup base css/js etc requirements for the eventual action render.
+	 *
+	 * @param $action
+	 * @return bool
+	 * @throws CHttpException
+	 * @see parent::beforeAction($action)
+	 */
 	protected function beforeAction($action)
 	{
 		// Set the module CSS class name.
@@ -164,6 +191,7 @@ class BaseEventTypeController extends BaseController
 
 	/**
 	 * Get all the elements for an event, the current module or an event_type
+	 *
 	 * @param string $action
 	 * @param int $event_type_id
 	 * @param Event $event
@@ -255,6 +283,7 @@ class BaseEventTypeController extends BaseController
 	 * Get the optional elements for the current module's event type
 	 * This will be overriden by the module
 	 *
+	 * @param $action
 	 * @return array
 	 */
 	public function getOptionalElements($action)
@@ -287,17 +316,16 @@ class BaseEventTypeController extends BaseController
 	}
 
 	/**
-	 * function to redirect to the patient episodes when the controller determines the action cannot be carried out
+	 * Redirect to the patient episodes when the controller determines the action cannot be carried out
 	 *
 	 */
 	protected function redirectToPatientEpisodes()
 	{
 		$this->redirect(array("/patient/episodes/".$this->patient->id));
-		Yii::app()->end();
 	}
 
 	/**
-	 * carries out the base create action
+	 * Carries out the base create action
 	 *
 	 * @return bool|string
 	 * @throws CHttpException
@@ -434,6 +462,12 @@ class BaseEventTypeController extends BaseController
 		));
 	}
 
+	/**
+	 * View the event specified by $id
+	 *
+	 * @param $id
+	 * @throws CHttpException
+	 */
 	public function actionView($id)
 	{
 		$this->moduleStateCssClass = 'view';
@@ -503,6 +537,14 @@ class BaseEventTypeController extends BaseController
 		$this->render('view', $viewData);
 	}
 
+	/**
+	 * The update action for the given event id
+	 *
+	 * @param $id
+	 * @throws CHttpException
+	 * @throws SystemException
+	 * @throws Exception
+	 */
 	public function actionUpdate($id)
 	{
 		$this->moduleStateCssClass = 'edit';
@@ -669,6 +711,8 @@ class BaseEventTypeController extends BaseController
 	 * Use this for any many to many relations defined on your elements. This is called prior to validation
 	 * so should set values without actually touching the database. To do that, the createElements and updateElements
 	 * methods should be extended to handle the POST values.
+	 *
+	 * @param BaseEventTypeElement $element
 	 */
 	protected function setPOSTManyToMany($element)
 	{
@@ -678,7 +722,8 @@ class BaseEventTypeController extends BaseController
 	/**
 	 * Uses the POST values to define elements and their field values without hitting the db, and then performs validation
 	 *
-	 * @param array() - elements
+	 * @param BaseEventTypeElement[] - $elements
+	 * @return array - $errors
 	 */
 	protected function validatePOSTElements($elements)
 	{
@@ -734,6 +779,13 @@ class BaseEventTypeController extends BaseController
 		return $errors;
 	}
 
+	/**
+	 * Render the default elements for the controller state
+	 *
+	 * @param $action
+	 * @param bool $form
+	 * @param bool $data
+	 */
 	public function renderDefaultElements($action, $form=false, $data=false)
 	{
 		foreach ($this->getDefaultElements($action) as $element) {
@@ -750,6 +802,13 @@ class BaseEventTypeController extends BaseController
 		}
 	}
 
+	/**
+	 * Render the optional elements for the controller state
+	 *
+	 * @param $action
+	 * @param bool $form
+	 * @param bool $data
+	 */
 	public function renderOptionalElements($action, $form=false,$data=false)
 	{
 		foreach ($this->getOptionalElements($action) as $element) {
@@ -766,6 +825,11 @@ class BaseEventTypeController extends BaseController
 		}
 	}
 
+	/**
+	 * Get all the episodes for the current patient
+	 *
+	 * @return array
+	 */
 	public function getEpisodes()
 	{
 		if (empty($this->episodes)) {
@@ -778,6 +842,19 @@ class BaseEventTypeController extends BaseController
 		return $this->episodes;
 	}
 
+	/**
+	 * Create the elements for an event with the given data. Returns false if there are errors, otherwise
+	 * returns the event that is created for the elements
+	 *
+	 * @param $elements
+	 * @param $data
+	 * @param $firm
+	 * @param $patientId
+	 * @param $userId
+	 * @param $eventTypeId
+	 * @return bool|string
+	 * @throws Exception
+	 */
 	public function createElements($elements, $data, $firm, $patientId, $userId, $eventTypeId)
 	{
 		$valid = true;
@@ -840,7 +917,7 @@ class BaseEventTypeController extends BaseController
 		// Create elements for the event
 		foreach ($elementsToProcess as $element) {
 			$element->event_id = $event->id;
-
+			error_log($elementClassName);
 			// No need to validate as it has already been validated and the event id was just generated.
 			if (!$element->save(false)) {
 				throw new Exception('Unable to save element ' . get_class($element) . '.');
@@ -957,6 +1034,8 @@ class BaseEventTypeController extends BaseController
 	}
 
 	/**
+	 * Get the current episode for the firm and patient
+	 *
 	 * @param Firm $firm
 	 * @param integer $patientId
 	 * @return Episode
@@ -966,6 +1045,13 @@ class BaseEventTypeController extends BaseController
 		return Episode::model()->getCurrentEpisodeByFirm($patientId, $firm);
 	}
 
+	/**
+	 * Create an episode for the firm and patient if it doesn't already exist. Return the episode.
+	 *
+	 * @param $firm
+	 * @param $patientId
+	 * @return Episode
+	 */
 	public function getOrCreateEpisode($firm, $patientId)
 	{
 		if (!$episode = $this->getEpisode($firm, $patientId)) {
@@ -975,6 +1061,16 @@ class BaseEventTypeController extends BaseController
 		return $episode;
 	}
 
+	/**
+	 * Create the event instance of the given type, based on the elements to process and the user id given.
+	 *
+	 * @param $episode
+	 * @param $userId
+	 * @param $eventTypeId
+	 * @param $elementsToProcess
+	 * @return Event
+	 * @throws Exception
+	 */
 	public function createEvent($episode, $userId, $eventTypeId, $elementsToProcess)
 	{
 		$info_text = '';
@@ -1000,6 +1096,12 @@ class BaseEventTypeController extends BaseController
 		return $event;
 	}
 
+
+	/**
+	 * Render the given errors with the standard template
+	 *
+	 * @param $errors
+	 */
 	public function displayErrors($errors, $bottom=false)
 	{
 		$this->renderPartial('//elements/form_errors',array(
@@ -1010,6 +1112,7 @@ class BaseEventTypeController extends BaseController
 
 	/**
 	 * Print action
+	 *
 	 * @param integer $id event id
 	 */
 	public function actionPrint($id)
@@ -1027,6 +1130,7 @@ class BaseEventTypeController extends BaseController
 
 	/**
 	 * Initialise print action
+	 *
 	 * @param integer $id event id
 	 * @throws CHttpException
 	 */
@@ -1042,9 +1146,11 @@ class BaseEventTypeController extends BaseController
 	}
 
 	/**
-	 * Render HTML
+	 * Render HTML print layout
+	 *
 	 * @param integer $id event id
-	 * @param array $elements
+	 * @param BaseEventTypeElement[] $elements
+	 * @param string $template
 	 */
 	protected function printHTML($id, $elements, $template='print')
 	{
@@ -1056,9 +1162,12 @@ class BaseEventTypeController extends BaseController
 	}
 
 	/**
-	 * Render PDF
+	 * Render PDF print layout
+	 *
 	 * @param integer $id event id
-	 * @param array $elements
+	 * @param BaseEventTypeElement[] $elements
+	 * @param string $template
+	 * @param array $params
 	 */
 	protected function printPDF($id, $elements, $template='print', $params=array())
 	{
@@ -1089,6 +1198,14 @@ class BaseEventTypeController extends BaseController
 		$this->event->audit('event','print',false);
 	}
 
+	/**
+	 * Delete the event given by $id. Performs the soft delete action if it's been confirmed by $_POST
+	 *
+	 * @param $id
+	 * @return bool
+	 * @throws CHttpException
+	 * @throws Exception
+	 */
 	public function actionDelete($id)
 	{
 		if (!$this->event = Event::model()->findByPk($id)) {
@@ -1154,6 +1271,9 @@ class BaseEventTypeController extends BaseController
 		return false;
 	}
 
+	/**
+	 * set base js vars for use in the standard scripts for the controller
+	 */
 	public function processJsVars()
 	{
 		if ($this->patient) {
