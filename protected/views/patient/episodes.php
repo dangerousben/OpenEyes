@@ -24,7 +24,7 @@ $noEpisodesFound=(boolean) (count($ordered_episodes)<1 && count($supportservicee
 ?>
 
 <h1 class="badge">Episodes and events</h1>
-<?php if($noEpisodesFound && BaseController::checkUserLevel(4)) { ?>
+<?php if($noEpisodesFound && $this->checkAccess('OprnCreateEpisode')) { ?>
 	<div class="row">
 		<div class="large-8 large-centered column">
 			<div class="box content">
