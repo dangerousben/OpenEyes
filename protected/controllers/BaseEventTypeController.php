@@ -19,6 +19,30 @@
 
 class BaseEventTypeController extends BaseModuleController
 {
+	const ACTION_TYPE_CREATE = 'Create';
+	const ACTION_TYPE_VIEW = 'View';
+	const ACTION_TYPE_PRINT = 'Print';
+	const ACTION_TYPE_EDIT = 'Edit';
+	const ACTION_TYPE_DELETE = 'Delete';
+	const ACTION_TYPE_FORM = 'Form';  // AJAX actions that are used during create and update but don't actually modify data themselves
+
+	static private $base_action_types = array(
+		'create' => self::ACTION_TYPE_CREATE,
+		'view' => self::ACTION_TYPE_VIEW,
+		'elementForm' => self::ACTION_TYPE_FORM,
+		'viewPreviousElements' => self::ACTION_TYPE_FORM,
+		'print' => self::ACTION_TYPE_PRINT,
+		'update' => self::ACTION_TYPE_EDIT,
+		'delete' => self::ACTION_TYPE_DELETE,
+	);
+
+	/**
+	 * Override for custom actions
+	 *
+	 * @var array
+	 */
+	static protected $action_types = array();
+
 	/* @var Firm */
 	public $firm;
 	/* @var Patient */
@@ -40,61 +64,29 @@ class BaseEventTypeController extends BaseModuleController
 	// defines additional variables to be available in view templates
 	public $extraViewProperties = array();
 	public $layout = '//layouts/events_and_episodes';
+	private $action_type_map;
 	private $episodes = array();
 	public $renderPatientPanel = true;
 
 	protected $open_elements;
 
-	/**
-	 * Checks to see if current user can create an event type
-	 *
-	 * @param EventType $event_type
-	 * @return bool
-	 * @deprecated use BaseController::CanCreateEventType
-	 */
-	public function checkEventAccess($event_type)
+	public function init()
 	{
-		return $this->canCreateEventType($event_type);
-
-		$firm = Firm::model()->findByPk(Yii::app()->session['selected_firm_id']);
-		if (!$firm->service_subspecialty_assignment_id) {
-			if (!$event_type->support_services) {
-				return false;
-			}
+		$this->action_type_map = array();
+		foreach (self::$base_action_types as $action => $type) {
+			$this->action_type_map[strtolower($action)] = $type;
+		}
+		foreach (static::$action_types as $action => $type) {
+			$this->action_type_map[strtolower($action)] = $type;
 		}
 
-		if (BaseController::checkUserLevel(5)) {
-			return true;
-		}
-		if (BaseController::checkUserLevel(4) && $event_type->class_name != 'OphDrPrescription') {
-			return true;
-		}
-		return false;
+		return parent::init();
 	}
 
-	/**
-	 * Get the accessRules array for the controller
-	 *
-	 * @return array
-	 */
 	public function accessRules()
 	{
-		return array(
-			// Level 2 can't change anything
-			array('allow',
-				'actions' => array('view'),
-				'expression' => 'BaseController::checkUserLevel(2)',
-			),
-			array('allow',
-				'actions' => $this->printActions(),
-				'expression' => 'BaseController::checkUserLevel(3)',
-			),
-			// Level 4 or above can do anything
-			array('allow',
-				'expression' => 'BaseController::checkUserLevel(4)',
-			),
-			array('deny'),
-		);
+		// Allow logged in users - the main authorisation check happens later in verifyActionAccess
+		return array(array('allow', 'users' => array('@')));
 	}
 
 	/**
@@ -105,6 +97,20 @@ class BaseEventTypeController extends BaseModuleController
 	public function getCurrent_episode()
 	{
 		return $this->episode;
+	}
+
+	/**
+	 * Return an ACTION_TYPE_ constant representing the type of an action for authorisation purposes
+	 *
+	 * @param string $action
+	 * @return string
+	 */
+	public function getActionType($action)
+	{
+		if (!isset($this->action_type_map[strtolower($action)])) {
+			throw new Exception("Action '{$action}' has no type associated with it");
+		}
+		return $this->action_type_map[strtolower($action)];
 	}
 
 	/**
@@ -223,13 +229,14 @@ class BaseEventTypeController extends BaseModuleController
 	}
 
 	/**
-	 * define the name of the actions that are print actions (for checking access based on print rules)
+	 * Override to use $action_types
 	 *
-	 * @return array
+	 * @param string $action
+	 * @return boolean
 	 */
-	public function printActions()
+	public function isPrintAction($action)
 	{
-		return array('print');
+		return self::getActionType($action) == self::ACTION_TYPE_PRINT;
 	}
 
 	/**
@@ -244,7 +251,7 @@ class BaseEventTypeController extends BaseModuleController
 	{
 		// Automatic file inclusion unless it's an ajax call
 		if ($this->assetPath && !Yii::app()->getRequest()->getIsAjaxRequest()) {
-			if (!in_array($action->id,$this->printActions())) {
+			if (!$this->isPrintAction($action->id)) {
 				// nested elements behaviour
 				//TODO: possibly put this into standard js library for events
 				Yii::app()->getClientScript()->registerScript('nestedElementJS', 'var moduleName = "' . $this->getModule()->name . '";', CClientScript::POS_HEAD);
@@ -260,6 +267,8 @@ class BaseEventTypeController extends BaseModuleController
 		}
 
 		$this->initAction($action->id);
+
+		$this->verifyActionAccess($action);
 
 		return parent::beforeAction($action);
 	}
@@ -387,11 +396,6 @@ class BaseEventTypeController extends BaseModuleController
 		if (!$this->episode = $this->getEpisode($this->firm, $this->patient->id)) {
 			$this->redirectToPatientEpisodes();
 		}
-
-		if (!$this->event_type->support_services && !$this->firm->getSubspecialty()) {
-			// Can't create a non-support service event for a support-service firm
-			$this->redirectToPatientEpisodes();
-		}
 	}
 
 	/**
@@ -433,13 +437,6 @@ class BaseEventTypeController extends BaseModuleController
 		$this->moduleStateCssClass = 'edit';
 
 		$this->initWithEventId(@$_GET['id']);
-
-		// Check the user's firm is of the correct subspecialty to have the
-		// rights to update this event
-		if ($this->firm->getSubspecialtyID() != $this->event->episode->getSubspecialtyID()) {
-			//The firm you are using is not associated with the subspecialty of the episode
-			$this->redirectToPatientEpisodes();
-		}
 	}
 
 	/**
@@ -448,6 +445,71 @@ class BaseEventTypeController extends BaseModuleController
 	protected function initActionDelete()
 	{
 		$this->initWithEventId(@$_GET['id']);
+	}
+
+	/**
+	 * @param CAction $action
+	 */
+	protected function verifyActionAccess(CAction $action)
+	{
+		$actionType = $this->getActionType($action->id);
+		$method = "check{$actionType}Access";
+
+		if (!method_exists($this, $method)) {
+			throw new Exception("No access check method found for action type '{$actionType}'");
+		}
+
+		if (!$this->$method()) {
+			throw new CHttpException(403);
+		}
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function checkCreateAccess()
+	{
+		return $this->checkAccess('OprnCreateEvent', $this->firm, $this->event_type);
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function checkViewAccess()
+	{
+		return $this->checkAccess('OprnViewClinical');
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function checkPrintAccess()
+	{
+		return $this->checkAccess('OprnPrint');
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function checkEditAccess()
+	{
+		return $this->checkAccess('OprnEditEvent', $this->firm, $this->event);
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function checkDeleteAccess()
+	{
+		return $this->checkAccess('OprnDeleteEvent', Yii::app()->session['user'], $this->firm, $this->event);
+	}
+
+	/**
+	 * @return boolean
+	 */
+	public function checkFormAccess()
+	{
+		return $this->checkAccess('OprnViewClinical');
 	}
 
 	/**
@@ -536,13 +598,7 @@ class BaseEventTypeController extends BaseModuleController
 		$this->setOpenElementsFromCurrentEvent('view');
 		// Decide whether to display the 'edit' button in the template
 		if ($this->editable) {
-			if (!BaseController::checkUserLevel(4) || (!$this->event->episode->firm && !$this->event->episode->support_services)) {
-				$this->editable = false;
-			} else {
-				if ($this->firm->getSubspecialtyID() != $this->event->episode->getSubspecialtyID()) {
-					$this->editable = false;
-				}
-			}
+			$this->editable = $this->checkEditAccess($this->event);
 		}
 		// Allow elements to override the editable status
 		if ($this->editable) {
@@ -571,7 +627,7 @@ class BaseEventTypeController extends BaseModuleController
 				'href' => Yii::app()->createUrl($this->event->eventType->class_name.'/default/update/'.$this->event->id),
 			);
 		}
-		if ($this->canDelete()) {
+		if ($this->checkDeleteAccess($this->event)) {
 			$this->event_actions = array(
 				EventAction::link('Delete',
 					Yii::app()->createUrl($this->event->eventType->class_name.'/default/delete/'.$this->event->id),
@@ -1329,15 +1385,6 @@ class BaseEventTypeController extends BaseModuleController
 		$this->event->audit('event','print',false);
 	}
 
-
-	public function canDelete()
-	{
-		if($this->event){
-			return($this->event->canDelete());
-		}
-		return false;
-	}
-
 	/**
 	 * Delete the event given by $id. Performs the soft delete action if it's been confirmed by $_POST
 	 *
@@ -1348,12 +1395,6 @@ class BaseEventTypeController extends BaseModuleController
 	 */
 	public function actionDelete($id)
 	{
-		// Only the event creator can delete the event, and only 24 hours after its initial creation
-		if (!$this->canDelete()) {
-			$this->redirect(array('default/view/'.$this->event->id));
-			return false;
-		}
-
 		if (!empty($_POST)) {
 			$this->event->softDelete();
 
@@ -1423,6 +1464,18 @@ class BaseEventTypeController extends BaseModuleController
 	}
 
 	/** START OF DEPRECATED METHODS */
+
+	/**
+	 * Whether the current user is allowed to call print actions
+	 *
+	 * @return boolean
+	 *
+	 * @deprecated Use checkPrintAccess
+	 */
+	public function canPrint()
+	{
+		return $this->checkPrintAccess();
+	}
 
 	/**
 	 * Get all the elements for an event, the current module or an event_type
