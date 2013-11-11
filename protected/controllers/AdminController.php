@@ -54,6 +54,9 @@ class AdminController extends BaseAdminController
 				if (!$user->save()) {
 					throw new Exception("Unable to save user: ".print_r($user->getErrors(),true));
 				}
+
+				$user->saveRoles($_POST['User']['roles']);
+
 				Audit::add('admin-User','add',serialize($_POST));
 				$this->redirect('/admin/users/'.ceil($user->id/$this->items_per_page));
 			}
@@ -106,6 +109,8 @@ class AdminController extends BaseAdminController
 						throw new Exception("Unable to save user: ".print_r($user->getErrors(),true));
 					}
 				}
+
+				$user->saveRoles($_POST['User']['roles']);
 
 				Audit::add('admin-User','edit',serialize(array_merge(array('id'=>$id),$_POST)));
 
