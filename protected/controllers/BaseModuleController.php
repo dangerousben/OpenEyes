@@ -111,15 +111,4 @@ class BaseModuleController extends BaseController {
 	{
 		return BaseController::checkUserLevel(3);
 	}
-
-	/**
-	 * define the name of the actions that are print actions (for checking access based on print rules)
-	 *
-	 * @return array
-	 */
-	public function printActions()
-	{
-		// stub method to be overridden in child controllers
-		return array();
-	}
 }
