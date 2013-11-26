@@ -91,7 +91,6 @@ if ($custom_episodes) {
     // config not defined, move on
   }
 }
-$x = $subspecialty->name;
 // if no user-defined config, just display the main (default) summary:
 if (!isset($episode_views)) {
   $episode_views = array('summary');
