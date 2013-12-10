@@ -37,76 +37,58 @@ class BaseAPI
 	}
 
 	/**
-	 * gets the element of type $element for the given patient in the given episode
+	 * gets all the events in the episode for the event type this API is for, most recent first.
 	 *
-	 * @param Patient $patient - the patient
 	 * @param Episode $episode - the episode
-	 * @param string $element - the element class
-	 *
-	 * @return unknown - the element type requested, or null
+	 * @return array - list of events of the type for this API instance
 	 */
-	public function getElementForLatestEventInEpisode($patient, $episode, $element)
+	protected function getEventsInEpisode(Episode $episode)
 	{
-		$event_type = $this->getEventType();
-
-		if ($event = $episode->getMostRecentEventByType($event_type->id)) {
-			$criteria = new CDbCriteria;
-			$criteria->compare('episode_id',$episode->id);
-			$criteria->compare('event_id',$event->id);
-			$criteria->order = 'event.created_date desc';
-
-			return $element::model()
-				->with('event')
-				->find($criteria);
-		}
+		return $episode->getAllEventsByType($this->getEventType()->id);
 	}
 
 	/**
-	 * gets all the events in the episode for the event type this API is for, for the given patient, most recent first.
-	 *
-	 * @param Patient $patient - the patient
-	 * @param Episode $episode - the episode
-	 *
-	 * @return array - list of events of the type for this API instance
+	 * @param Episode $episode
+	 * @return Event|null
 	 */
-	public function getEventsInEpisode($patient, $episode)
+	protected function getMostRecentEventInEpisode(Episode $episode)
 	{
-		$event_type = $this->getEventType();
-
-		if ($episode) {
-			return $episode->getAllEventsByType($event_type->id);
-		}
-		return array();
+		return $episode->getMostRecentEventByType($this->getEventType()->id);
 	}
 
-	public function getMostRecentEventInEpisode($episode_id, $event_type_id)
+	/**
+	 * gets the element of type $element_class in the latest event from the given episode
+	 *
+	 * @param Episode $episode - the episode
+	 * @param string $element_class - the element class
+	 *
+	 * @return BaseElement|null - the element type requested, or null
+	 */
+	protected function getElementForLatestEventInEpisode(Episode $episode, $element_class)
 	{
-		$criteria = new CDbCriteria;
-		$criteria->compare('event_type_id',$event_type_id);
-		$criteria->compare('episode_id',$episode_id);
-		$criteria->order = 'created_date desc';
+		if (($event = $this->getMostRecentEventInEpisode($episode))) {
+			return $event->getElementByClass($element_class);
+		}
 
-		return Event::model()->find($criteria);
+		return null;
 	}
 
 	/*
 	 * gets the most recent instance of a specific element in the current episode
 	 *
+	 * @param Episode $episode
+	 * @param string $element_class
+	 * @return BaseElement|null
 	 */
-	public function getMostRecentElementInEpisode($episode_id, $event_type_id, $model)
+	protected function getMostRecentElementInEpisode(Episode $episode, $element_class)
 	{
-		$criteria = new CDbCriteria;
-		$criteria->compare('event_type_id',$event_type_id);
-		$criteria->compare('episode_id',$episode_id);
-		$criteria->order = 'created_date desc';
-
-		foreach (Event::model()->findAll($criteria) as $event) {
-			if ($element = $model::model()->find('event_id=?',array($event->id))) {
+		foreach ($this->getEventsInEpisode($episode) as $event) {
+			if (($element = $event->getElementByClass($element_class))) {
 				return $element;
 			}
 		}
 
-		return false;
+		return null;
 	}
 
 	/*
