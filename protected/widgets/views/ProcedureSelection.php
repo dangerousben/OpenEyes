@@ -17,6 +17,9 @@
  * @license http://www.gnu.org/licenses/gpl-3.0.html The GNU General Public License V3.0
  */
 ?>
+<?php
+$selected_procs_var = "selected_procs_{$identifier}";
+?>
 <div class="row field-row procedure-selection eventDetail<?php if ($last) {?> eventDetailLast<?php }?>" id="typeProcedure"<?php if ($hidden) {?> style="display: none;"<?php }?>>
 	<div class="large-2 column">
 		<label for="select_procedure_id_<?php echo $identifier;?>">
@@ -51,12 +54,6 @@
 						'name'=>'procedure_id_'.$identifier,
 						'id'=>'autocomplete_procedure_id_'.$identifier,
 						'source'=>"js:function(request, response) {
-						var existingProcedures = [];
-						$('#procedureList_$identifier').children('h4').children('div.procedureItem').map(function() {
-							var text = $.trim($(this).children('span:nth-child(2)').text());
-							existingProcedures.push(text);
-						});
-
 						$.ajax({
 							'url': '" . Yii::app()->createUrl('procedure/autocomplete') . "',
 							'type':'GET',
@@ -67,8 +64,7 @@
 								var result = [];
 
 								for (var i = 0; i < data.length; i++) {
-									var index = $.inArray(data[i], existingProcedures);
-									if (index == -1) {
+									if (!{$selected_procs_var}.hasOwnProperty(data[i])) {
 										result.push(data[i]);
 									}
 								}
@@ -117,14 +113,13 @@
 				<tbody class="body">
 				<?php
 				if (!empty($selected_procedures)) {
-					foreach ($selected_procedures as $procedure) {?>
+					foreach ($selected_procedures as $procedure) {
+						$totalDuration += $procedure['default_duration'];
+				?>
 						<tr class="item">
-							<td>
-								<?php
-								$totalDuration += $procedure['default_duration'];
-								echo CHtml::hiddenField('Procedures_'.$identifier.'[]', $procedure['id']);
-								echo $procedure['term'];
-								?>
+							<td class="procedure">
+								<span class="field"><?= CHtml::hiddenField('Procedures_'.$identifier.'[]', $procedure['id']) ?></span>
+								<span class="value"><?= $procedure['term']; ?>
 							</td>
 							<?php if ($durations) {?>
 								<td class="duration">
@@ -173,9 +168,14 @@
 </div>
 
 <script type="text/javascript">
-// Note: Removed_stack is probably not the best name for this. Selected procedures is more accurate.
-// It is used to suppress procedures from the add a procedure inputs
-var removed_stack_<?php echo $identifier?> = [<?php echo implode(',', $removed_stack); ?>];
+<?php
+$selected_procs = array();
+foreach ($this->selected_procedures as $proc) {
+	$selected_procs[$proc->term] = true;
+}
+
+echo "var {$selected_procs_var} = " . CJavaScript::encode($selected_procs) . ";\n";
+?>
 
 function updateTotalDuration(identifier)
 {
@@ -224,27 +224,10 @@ function removeProcedure(element, identifier)
 		callbackRemoveProcedure(procedure_id);
 	}
 
-	// Remove removed procedure from the removed_stack
-	var stack = [];
-	var popped = null;
-	$.each(window["removed_stack_"+identifier], function(key, value) {
-		if (value["id"] != procedure_id) {
-			stack.push(value);
-		} else {
-			popped = value;
-		}
-	});
-	window["removed_stack_"+identifier] = stack;
+	delete <?= $selected_procs_var ?>[procedure_id];
 
 	// Refresh the current procedure select box in case the removed procedure came from there
-	if ($('#subsection_id_'+identifier).length) {
-		// Procedures are in subsections, so fetch a clean list via ajax (easier than trying to work out if it's the right list)
-		updateProcedureSelect(identifier);
-	} else if (popped) {
-		// No subsections, so we should be safe to just push it back into the list
-		$('#select_procedure_id_'+identifier).append('<option value="'+popped["id"]+'">'+popped["name"]+'</option>').removeAttr('disabled');
-		sort_selectbox($('#select_procedure_id_'+identifier));
-	}
+	updateProcedureSelect(identifier);
 
 	return false;
 }
@@ -279,15 +262,13 @@ function updateProcedureSelect(identifier)
 				$('select[name=select_procedure_id_'+identifier+']').attr('disabled', false);
 				$('select[name=select_procedure_id_'+identifier+']').html(data);
 
-				// remove any items in the removed_stack
+				// remove any already-selected procedures
 				$('select[name=select_procedure_id_'+identifier+'] option').map(function() {
 					var obj = $(this);
 
-					$.each(window["removed_stack_"+identifier], function(key, value) {
-						if (value["id"] == obj.val()) {
-							obj.remove();
-						}
-					});
+					if <?= $selected_procs_var ?>.hasOwnProperty(obj.val()) {
+						obj.remove();
+					}
 				});
 
 				$('select[name=select_procedure_id_'+identifier+']').parent().show();
@@ -369,15 +350,12 @@ function ProcedureSelectionSelectByName(name, callback, identifier)
 
 				$('#select_procedure_id_'+identifier).children().each(function () {
 					if ($(this).text() == m[1]) {
-						var id = $(this).val();
-						var name = $(this).text();
-
-						window["removed_stack_"+identifier].push({name: name, id: id});
-
 						$(this).remove();
 					}
 				});
 			}
+
+			<?= $selected_procs_var ?>[name] = true;
 
 			if (callback && typeof(window.callbackAddProcedure) == 'function') {
 				m = data.match(/<input type=\"hidden\" value=\"([0-9]+)\"/);

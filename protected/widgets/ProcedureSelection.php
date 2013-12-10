@@ -21,7 +21,6 @@ class ProcedureSelection extends BaseFieldWidget
 {
 	public $subsections;
 	public $procedures;
-	public $removed_stack;
 	public $newRecord;
 	public $selected_procedures;
 	public $form;
@@ -69,37 +68,6 @@ class ProcedureSelection extends BaseFieldWidget
 			$this->subsections = SubspecialtySubsection::model()->getList($subspecialty_id);
 		}
 		$this->procedures = array();
-		$this->removed_stack = array();
-		if (empty($this->subsections)) {
-			foreach (Procedure::model()->getListBySubspecialty($subspecialty_id, $this->restrict_common) as $proc_id => $name) {
-				if (empty($_POST)) {
-					$found = false;
-					if ($this->selected_procedures) {
-						foreach ($this->selected_procedures as $procedure) {
-							if ($procedure->id == $proc_id) {
-								$found = true; break;
-							}
-						}
-					}
-					if (!$found) {
-						$this->procedures[$proc_id] = $name;
-					} else {
-						$this->removed_stack[] = "{id: $proc_id, name: '$name'}";
-					}
-				} else {
-					if (!@$_POST['Procedures_'.$this->identifier] || !in_array($proc_id,$_POST['Procedures_'.$this->identifier])) {
-						$this->procedures[$proc_id] = $name;
-					} else {
-						$this->removed_stack[] = "{id: $proc_id, name: '$name'}";
-					}
-				}
-			}
-		} else {
-			// Doesn't matter if removed_stack contains non-common procedures as lists are reloaded using ajax on removal
-			foreach ($this->selected_procedures as $selected_procedure) {
-				$this->removed_stack[] = "{id: $selected_procedure->id, name: '$selected_procedure->term'}";
-			}
-		}
 
 		$this->class = get_class($this->element);
 
