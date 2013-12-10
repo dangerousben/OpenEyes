@@ -19,6 +19,13 @@
 
 class BaseAPI
 {
+	private $event_type;
+
+	public function __construct(EventType $event_type)
+	{
+		$this->event_type = $event_type;
+	}
+
 	/*
 	 * gets the event type for the api instance
 	 *
@@ -26,12 +33,7 @@ class BaseAPI
 	 */
 	protected function getEventType()
 	{
-		$module_class = preg_replace('/_API$/','',get_class($this));
-
-		if (!$event_type = EventType::model()->find('class_name=?',array($module_class))) {
-			throw new Exception("Module is not migrated: $module_class");
-		}
-		return $event_type;
+		return $this->event_type;
 	}
 
 	/**
