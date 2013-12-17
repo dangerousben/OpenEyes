@@ -6,7 +6,9 @@
     "node_modules"
   ],
   "dependencies": {
-    "modernizr": "~2.6.2"
+    "modernizr": "~2.6.2",
+    "flot": "~0.8.2",
+	"flot.tooltip": "git@github.com:krzysu/flot.tooltip.git"
   },
   "devDependencies": {
     "google-code-prettify": "~1.0.0",
