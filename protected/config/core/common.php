@@ -87,6 +87,16 @@ return array(
 					'baseUrl' => 'js/components',
 					'depends' => array('jquery'),
 				),
+				'd3' => array(
+					'js' => array(YII_DEBUG ? 'd3.js' : 'd3.min.js'),
+					'baseUrl' => 'js/components/d3',
+				),
+				'rickshaw' => array(
+					'js' => array(YII_DEBUG ? 'rickshaw.js' : 'rickshaw.min.js'),
+					'css' => array(YII_DEBUG ? 'rickshaw.css' : 'rickshaw.min.css'),
+					'baseUrl' => 'js/components/rickshaw',
+					'depends' => array('d3'),
+				),
 			),
 		),
 		'user' => array(
