@@ -84,4 +84,37 @@ class AuthManager extends CDbAuthManager
 	{
 		$this->rulesets[$namespace] = $ruleset;
 	}
+
+	/**
+	 * List all users with the specified authitem assigned 
+	 *
+	 * @param string $itemName
+	 * @return User[]
+	 */
+	public function listUsersWithAccess($itemName)
+	{
+		$userIds = array();
+		foreach ($this->getItemAncestors($itemName) as $item) {
+			$userIds = array_merge(
+				$userIds,
+				$this->db->createCommand()->select('userid')->from($this->assignmentTable)
+					->where('itemname = ?', array($item))->queryColumn()
+			);
+		}
+		return User::model()->findAllByPk($userIds);
+	}
+
+	protected function getItemAncestors($itemName)
+	{
+		$ancestors = array($itemName);
+
+		$parents = $this->db->createCommand()->select('parent')->from($this->itemChildTable)
+			->where('child = ?', array($itemName))->queryColumn();
+
+		foreach ($parents as $parent) {
+			$ancestors = array_merge($ancestors, $this->getItemAncestors($parent));
+		}
+
+		return $ancestors;
+	}
 }
