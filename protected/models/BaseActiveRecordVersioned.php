@@ -254,4 +254,65 @@ class BaseActiveRecordVersioned extends BaseActiveRecord
 
 		parent::applyScopes($criteria);
 	}
+
+
+	/**
+	 * Class-level method to update many-to-many relationships in a soft-deletion aware manner
+	 *
+	 * This method should be called on the link table model.
+	 * Limitations: no facility to record extra data in the link table
+	 *              doesn't support composite primary keys
+	 *
+	 * @param CActiveRecord $record Record to link
+	 * @param mixed[] $related Array of IDs or AR instances to link to
+	 */
+	public function updateManyToMany(CActiveRecord $record, array $related)
+	{
+		$related_class = ($related && is_object($related[0])) ? get_class($related[0]) : null;
+
+		$rels = array();
+		foreach ($record->getMetaData()->relations as $name => $rel) {
+			if ($rel instanceof CManyManyRelation &&
+				!$rel->on && !$rel->scopes && !$rel->through &&
+				$rel->getJunctionTableName() == $this->tableName() &&
+				(!$related_class || $rel->className == $related_class)) {
+				$rels[] = $rel;
+			}
+		}
+
+		if (count($rels) != 1) {
+			throw new Exception(
+				"No " . ($rels ? "unambiguous " : "") . "relationship found linking '" . get_class($record) . "' " .
+				($related_class ? "to '{$related_class}' " : "") . "via '" . $this->tableName() . "'"
+			);
+		}
+
+		list ($record_fk, $related_fk) = $rels[0]->getJunctionForeignKeys();
+
+		$record_id = $record->{$record->tableSchema->primaryKey};
+		$related_ids = array();
+		foreach ($related as $item) {
+			$related_ids[($item instanceof CActiveRecord) ? $item->{$item->tableSchema->primaryKey} : $item] = true;
+		}
+
+		foreach ($this->includeDeleted()->findAllByAttributes(array($record_fk => $record_id)) as $link) {
+			$related_id = $link->$related_fk;
+			if (isset($related_ids[$related_id])) {
+				if ($link->deleted) {
+					$link->deleted = 0;
+					if (!$link->save()) throw new Exception("Failed to save link");
+				}
+				unset($related_ids[$related_id]);
+			} else {
+				if (!$link->delete()) throw new Exception("Failed to delete link");
+			}
+		}
+
+		foreach (array_keys($related_ids) as $missing_id) {
+			$link = new static;
+			$link->$record_fk = $record_id;
+			$link->$related_fk = $missing_id;
+			if (!$link->save()) throw new Exception("Failed to save link");
+		}
+	}
 }
