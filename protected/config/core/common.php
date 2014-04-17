@@ -150,6 +150,9 @@ return array(
 			'class' => 'Mailer',
 			'mode' => 'sendmail',
 		),
+		'model' => array(
+			'class' => 'ModuleLocator',
+		),
 		'moduleAPI' => array(
 			'class' => 'ModuleAPI',
 		),
