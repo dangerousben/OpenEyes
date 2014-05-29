@@ -168,6 +168,14 @@ class Api_PatientTest extends FhirTestCase
 		$this->assertXPathCount(1, './atom:entry');
 		$this->assertXPathEquals($this->client->getBaseUrl() . '/Patient/18474', 'string(./atom:entry/atom:id/text())');
 		$this->assertXPathEquals('Patient', 'local-name(./atom:entry/atom:content/*)');
+	}
 
+	public function testMultipleGivenNames()
+	{
+		$source = file_get_contents(__DIR__ . '/files/Patient-MultipleGivenNames.xml');
+		$this->post('Patient', $source);
+
+		$this->get($this->response->getLocation());
+		$this->assertXmlEquals($source);
 	}
 }

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Patient xmlns="http://hl7.org/fhir">
+  <identifier>
+    <use value="official"/>
+    <label value="NHS Number"/>
+    <system value="http://www.datadictionary.nhs.uk/data_dictionary/attributes/n/nhs/nhs_number_de.asp"/>
+    <value value="123456789"/>
+  </identifier>
+  <identifier>
+    <label value="Hospital Number"/>
+    <value value="0123456"/>
+  </identifier>
+  <name>
+    <family value="Rimmer"/>
+    <given value="Arnold"/>
+    <given value="Judas"/>
+    <prefix value="Mr"/>
+  </name>
+  <telecom>
+    <system value="phone"/>
+    <value value="01234 567890"/>
+    <use value="home"/>
+  </telecom>
+  <gender>
+    <coding>
+      <system value="http://hl7.org/fhir/v3/AdministrativeGender"/>
+      <code value="M"/>
+    </coding>
+  </gender>
+</Patient>

@@ -52,6 +52,7 @@ class PatientService extends ModelService
 		$res->title = $patient->contact->title;
 		$res->family_name = $patient->contact->last_name;
 		$res->given_name = $patient->contact->first_name;
+		$res->given_names = explode(" ", $patient->contact->first_name);
 		$res->gender = $patient->gender;
 		$res->birth_date = $patient->dob;
 		$res->date_of_death = $patient->date_of_death;

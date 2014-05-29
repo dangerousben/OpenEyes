@@ -21,6 +21,8 @@ class Patient extends Resource
 	{
 		$patient = parent::fromFhir($fhirObject);
 
+		$patient->given_name = implode(" ", $patient->given_names);
+
 		foreach ($patient->care_providers as $ref) {
 			switch ($ref->getServiceName()) {
 				case 'Gp':
@@ -52,6 +54,8 @@ class Patient extends Resource
 	public $title;
 	public $family_name;
 	public $given_name;
+
+	public $given_names;
 
 	public $gender;
 

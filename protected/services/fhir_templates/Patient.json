@@ -14,7 +14,7 @@
 	"name": [
 		{
 			"family": [{":subst": "family_name"}],
-			"given": [{":subst": "given_name"}],
+			"given": {":subst": "given_names"},
 			"prefix": [{":subst": "title"}]
 		}
 	],
