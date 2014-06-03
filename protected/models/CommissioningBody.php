@@ -71,10 +71,7 @@ class CommissioningBody extends BaseActiveRecordVersioned
 		// will receive user inputs.
 		return array(
 			array('name', 'required'),
-			array('commissioning_body_type_id, name, code', 'safe'),
-			// The following rule is used by search().
-			// Please remove those attributes that should not be searched.
-			array('id, name', 'safe', 'on'=>'search'),
+			array('commissioning_body_type_id, name', 'safe'),
 		);
 	}
 
@@ -103,38 +100,18 @@ class CommissioningBody extends BaseActiveRecordVersioned
 		);
 	}
 
-	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search()
-	{
-		// Warning: Please modify the following code to remove attributes that
-		// should not be searched.
-
-		$criteria=new CDbCriteria;
-
-		$criteria->compare('id',$this->id,true);
-		$criteria->compare('name',$this->name,true);
-		$criteria->compare('code',$this->code,true);
-
-		return new CActiveDataProvider(get_class($this), array(
-			'criteria'=>$criteria,
-		));
-	}
-	
 	public function getTypeShortName()
 	{
 		return $this->type ? $this->type->shortname : 'CB';
 	}
-	
+
 	public function getAddress()
 	{
 		if ($this->contact && $this->contact->address) {
 			return $this->contact->address;
 		}
 	}
-	
+
 	public function getCorrespondenceName()
 	{
 		return $this->name;

@@ -22,15 +22,12 @@
  *
  * The followings are the available columns in table 'patient':
  * @property integer $id
- * @property string  $pas_key
  * @property string  $title
  * @property string  $first_name
  * @property string  $last_name
  * @property string  $dob
  * @property string  $date_of_death
  * @property string  $gender_id
- * @property string  $hos_num
- * @property string  $nhs_num
  * @property string  $primary_phone
  * @property integer $gp_id
  * @property integer $practice_id
@@ -59,15 +56,6 @@ class Patient extends BaseActiveRecordVersioned
 	private $_orderedepisodes;
 	private $metadata_keys = array();
 
-	/**
-		* Returns the static model of the specified AR class.
-		* @return Patient the static model class
-		*/
-	public static function model($className=__CLASS__)
-	{
-		return parent::model($className);
-	}
-
 	public function behaviors()
 	{
 		return array(
@@ -90,8 +78,8 @@ class Patient extends BaseActiveRecordVersioned
 	}
 
 	/**
-		* @return string the associated database table name
-		*/
+	 * @return string the associated database table name
+	 */
 	public function tableName()
 	{
 		return 'patient';
@@ -105,16 +93,13 @@ class Patient extends BaseActiveRecordVersioned
 	}
 
 	/**
-		* @return array validation rules for model attributes.
-		*/
+	 * @return array validation rules for model attributes.
+	 */
 	public function rules()
 	{
 		return array(
-			array('hos_num', 'required'),
-			array('pas_key', 'length', 'max' => 10),
-			array('hos_num, nhs_num', 'length', 'max' => 40),
 			array('dob, gender_id, date_of_death, ethnic_group_id, yob, gp_id, practice_id', 'safe'),
-			array('dob, hos_num, nhs_num, date_of_death', 'safe', 'on' => 'search'),
+			array('dob, date_of_death', 'safe', 'on' => 'search'),
 		);
 	}
 
@@ -162,6 +147,7 @@ class Patient extends BaseActiveRecordVersioned
 				'join' => 'join `disorder` `ophthalmicDiagnosesDisorder` on `ophthalmicDiagnoses`.`disorder_id` = `ophthalmicDiagnosesDisorder`.`id` join `specialty` '.
 					'`ophthalmicDiagnosesDisorderSpecialty` on `ophthalmicDiagnosesDisorder`.`specialty_id` = `ophthalmicDiagnosesDisorderSpecialty`.`id` and '.
 					'`ophthalmicDiagnosesDisorderSpecialty`.`code` = \'130\'', 'order' => 'date asc'),
+			'identifiers' => array(self::HAS_MANY, 'PatientIdentifier', 'resource_id'),
 		);
 	}
 
@@ -172,13 +158,10 @@ class Patient extends BaseActiveRecordVersioned
 	{
 		return array(
 			'id' => 'ID',
-			'pas_key' => 'PAS key',
 			'dob' => 'Date of birth',
 			'date_of_death' => 'Date of death',
 			'gender_id' => 'Gender',
 			'ethnic_group_id' => 'Ethnic group',
-			'hos_num' => 'Hospital number',
-			'nhs_num' => 'NHS number',
 			'yob' => 'Year of birth',
 			'primary_phone' => 'Telephone',
 			'first_name' => 'First name(s)',
@@ -351,6 +334,22 @@ class Patient extends BaseActiveRecordVersioned
 		}
 
 		return $this->_orderedepisodes;
+	}
+
+	/**
+	 * Backwards-compatibility function to fetch hospital number
+	 *
+	 * @return string
+	 * @deprecated
+	 */
+	public function getHos_num()
+	{
+		return PatientIdentifier::model()->getBySystem($this->id, 'hos_num');
+	}
+
+	public function getNhs_num()
+	{
+		return PatientIdentifier::model()->getBySystem($this->id, 'nhs_num');
 	}
 
 	/**

@@ -1,0 +1,5 @@
+{
+	"label": {":subst": "label"},
+	"system": {":subst": "system"},
+	"value": {":subst": "value"}
+}

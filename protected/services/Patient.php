@@ -64,8 +64,7 @@ class Patient extends Resource
 		return parent::getServiceClass($fhirType);
 	}
 
-	public $nhs_num;
-	public $hos_num;
+	public $identifiers;
 
 	public $title;
 	public $family_name;

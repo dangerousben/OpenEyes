@@ -22,7 +22,6 @@
  *
  * The followings are the available columns in table 'practice':
  * @property integer $id
- * @property string $code
  * @property string $phone
  *
  * The followings are the available model relations:
@@ -32,15 +31,6 @@
 class Practice extends BaseActiveRecordVersioned
 {
 	public $use_pas = TRUE;
-
-	/**
-	 * Returns the static model of the specified AR class.
-	 * @return Practice the static model class
-	 */
-	public static function model($className=__CLASS__)
-	{
-		return parent::model($className);
-	}
 
 	/**
 	 * Suppress PAS integration
@@ -77,9 +67,7 @@ class Practice extends BaseActiveRecordVersioned
 	public function rules()
 	{
 		return array(
-			array('code', 'required'),
 			array('phone, contact_id', 'safe'),
-			array('id, code', 'safe', 'on'=>'search'),
 		);
 	}
 
@@ -93,38 +81,6 @@ class Practice extends BaseActiveRecordVersioned
 			'commissioningbodyassigments' => array(self::HAS_MANY, 'CommissioningBodyPracticeAssignment', 'practice_id'),
 			'commissioningbodies' => array(self::MANY_MANY, 'CommissioningBody', 'commissioning_body_practice_assignment(practice_id, commissioning_body_id)'),
 		);
-	}
-
-	/**
-	 * @return array customized attribute labels (name=>label)
-	 */
-	public function attributeLabels()
-	{
-		return array(
-			'id' => 'ID',
-			'code' => 'Code',
-			'phone' => 'Phone',
-		);
-	}
-
-	/**
-	 * Retrieves a list of models based on the current search/filter conditions.
-	 * @return CActiveDataProvider the data provider that can return the models based on the search/filter conditions.
-	 */
-	public function search()
-	{
-		// Warning: Please modify the following code to remove attributes that
-		// should not be searched.
-
-		$criteria=new CDbCriteria;
-
-		$criteria->compare('id',$this->id,true);
-		$criteria->compare('code',$this->code,true);
-		$criteria->compare('phone',$this->phone,true);
-
-		return new CActiveDataProvider(get_class($this), array(
-			'criteria'=>$criteria,
-		));
 	}
 
 	/**

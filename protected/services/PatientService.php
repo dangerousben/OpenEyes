@@ -34,8 +34,7 @@ class PatientService extends DeclarativeModelService
 				'contact' => array('contact_id', 'Contact'),
 			),
 			'fields' => array(
-				'nhs_num' => 'nhs_num',
-				'hos_num' => 'hos_num',
+				'identifiers' => array(self::TYPE_LIST, 'identifiers', 'Identifier', 'PatientIdentifier', 'id'),
 				'title' => 'contact.title',
 				'family_name' => 'contact.last_name',
 				'given_name' => 'contact.first_name',
@@ -47,6 +46,17 @@ class PatientService extends DeclarativeModelService
 				'gp_ref' => array(self::TYPE_REF, 'gp_id', 'Gp'),
 				'prac_ref' => array(self::TYPE_REF, 'practice_id', 'Practice'),
 				'cb_refs' => array(self::TYPE_REF_LIST, 'commissioningbody_assignments', 'commissioning_body_id', 'CommissioningBody'),
+			),
+		),
+		'Identifier' => array(
+			'ar_class' => 'PatientIdentifier',
+			'reference_objects' => array(
+				'type' => array('type_id', 'IdentifierType', array('system', 'label')),
+			),
+			'fields' => array(
+				'label' => 'type.label',
+				'system' => 'type.system',
+				'value' => 'value',
 			),
 		),
 		'PatientAddress' => array(
@@ -87,20 +97,28 @@ class PatientService extends DeclarativeModelService
 
 	public function search(array $params)
 	{
-		$model = $this->getSearchModel();
-		if (isset($params['id'])) $model->id = $params['id'];
+		$crit = new CDbCriteria(array('distinct' => true));
 
-		$searchParams = array('pageSize' => null);
+		$joins = array();
+
+		if (isset($params['id'])) $crit->compare('t.id', $params['id']);
+
 		if (isset($params['identifier'])) {
-			$searchParams['hos_num'] = $params['identifier'];
-			$searchParams['nhs_num'] = $params['identifier'];
+			$joins[] = 'inner join patient_identifier pi on pi.patient_id = t.id';
+			$crit->compare('pi.value', $params['identifier']);
 		}
-		if (isset($params['family'])) $searchParams['last_name'] = $params['family'];
-		if (isset($params['given'])) $searchParams['first_name'] = $params['given'];
+
+		if (isset($params['family']) || isset($params['given'])) {
+			$joins[] = 'inner join contact c on c.id = p.contact_id';
+		}
+
+		if (isset($params['family'])) $crit->compare('c.last_name', $params['family'], true);
+		if (isset($params['given'])) $crit->compare('c.first_name', $params['given'], true);
+
+		if (isset($params['_count'])) $crit->limit = $params['_count'];
 
 		$resources = array();
-		$results = $model->search($searchParams);
-		foreach ($results['data'] as $model) {
+		foreach ($this->getSearchModel()->findAll($crit) as $model) {
 			$resources[] = $this->modelToResource($model);
 		}
 		return $resources;

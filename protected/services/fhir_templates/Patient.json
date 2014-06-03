@@ -1,16 +1,5 @@
 {
-	"identifier": [
-		{
-			"use": "official",
-			"label": "NHS Number",
-			"system": {":match": "http://www.datadictionary.nhs.uk/data_dictionary/attributes/n/nhs/nhs_number_de.asp"},
-			"value": {":subst": "nhs_num"}
-		},
-		{
-			"label": {":match": "Hospital Number"},
-			"value": {":subst": "hos_num"}
-		}
-	],
+	"identifier": {":subst": "identifiers"},
 	"name": [
 		{
 			"family": [{":subst": "family_name"}],
