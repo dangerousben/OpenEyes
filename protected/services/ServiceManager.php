@@ -18,6 +18,7 @@ namespace services;
 class ServiceManager extends \CApplicationComponent
 {
 	public $internal_services = array();
+	public $fhir_servers = array();
 
 	private $service_config = array();
 	private $services = array();
@@ -32,7 +33,18 @@ class ServiceManager extends \CApplicationComponent
 				'resource_class' => $resource_class,
 				'fhir_type' => $resource_class::getFhirType(),
 				'fhir_prefix' => $resource_class::getFhirPrefix(),
+				'params' => array(),
 			);
+		}
+
+		foreach ($this->fhir_servers as $fhir_server) {
+			foreach ($fhir_server['resources'] as $service_name => $resource) {
+				$this->service_config[$service_name] = array(
+					'service_class' => 'services\FhirService',
+					'resource_class' => 'services\{$resource}',
+					'params' => array('base_url' => $fhir_server['base_url'], 'resource_type' => $resource),
+				);
+			}
 		}
 
 		parent::init();
@@ -65,7 +77,7 @@ class ServiceManager extends \CApplicationComponent
 		if (!array_key_exists($name, $this->services)) {
 			if (isset($this->service_config[$name])) {
 				$class_name = $this->service_config[$name]['service_class'];
-				$service = $class_name::load();
+				$service = $class_name::load($this->service_config[$name]['params']);
 				if (!$service instanceof Service) {
 					throw new \Exception("Invalid service class: '{$class_name}'");
 				}
@@ -119,6 +131,20 @@ class ServiceManager extends \CApplicationComponent
 
 		// Profile(s) supplied but no match, not necessarily an error
 		return null;
+	}
+
+	/**
+	 * @return string|null
+	 */
+	public function getLocalFhirBaseUrl()
+	{
+		$app = \Yii::app();
+
+		if ($app instanceof \CWebApplication) {
+			return $app->getBaseUrl(true) . '/api';
+		} else {
+			return null;
+		}
 	}
 
 	/**

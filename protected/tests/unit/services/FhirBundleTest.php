@@ -15,46 +15,36 @@
 
 namespace services;
 
-class FhirBundle extends DataObject
+class FhirBundleTest extends \PHPUnit_Framework_TestCase
 {
-	/**
-	 * @param string $title
-	 * @param string $self_url
-	 * @param string $base_url
-	 * @param Resource[] $resources Indexed by URL
-	 */
-	static public function create($title, $self_url, $base_url, array $resources)
+	public function testFromFhir()
 	{
-		$bundle = new self(
-			array(
-				'title' => $title,
-				'id' => 'urn:uuid:' . \Helper::generateUuid(),
-				'self_url' => $self_url,
-				'base_url' => $base_url,
-				'updated' => date(DATE_ATOM),
-			)
+		$fhir_object = (object)array(
+			"resourceType" => "Bundle",
+			"link" => array(
+				(object)array(
+					"rel" => "self",
+					"href" => "http://example.com/self",
+				),
+				(object)array(
+					"rel" => "fhir-base",
+					"href" => "http://example.com/base",
+				),
+			),
+			"entry" => array(
+				(object)array(
+					"content" => (object)array(
+						"resourceType" => "Patient",
+					),
+				)
+			),
 		);
 
-		foreach ($resources as $url => $resource) {
-			$bundle->entries[] = FhirBundleEntry::fromResource($url, $resource);
-		}
+		$bundle = FhirBundle::fromFhir($fhir_object, FhirContext::create("http://example.com"));
 
-		return $bundle;
+		$this->assertEquals("http://example.com/self", $bundle->self_url);
+		$this->assertEquals("http://example.com/base", $bundle->base_url);
+		$this->assertCount(1, $bundle->entries);
+		$this->assertInstanceOf("services\Patient", $bundle->entries[0]->resource);
 	}
-
-	static protected function subObjectsFromFhir($fhir_object, FhirContext $context)
-	{
-		if (isset($fhir_object->entry)) {
-			foreach ($fhir_object->entry as &$entry) {
-				$entry = FhirBundleEntry::fromFhir($entry, $context);
-			}
-		}
-	}
-
-	public $title;
-	public $id;
-	public $self_url;
-	public $base_url;
-	public $updated;
-	public $entries = array();
 }

@@ -50,12 +50,25 @@ abstract class DataObject implements FhirCompatible
 	 * Convert a FHIR object into a service layer object
 	 *
 	 * @param StdClass $fhirObject
+	 * @param FhirContext $context
 	 * @return DataObject
 	 */
-	static public function fromFhir($fhir_object)
+	static public function fromFhir($fhir_object, FhirContext $context)
 	{
 		$fhir_object = clone($fhir_object);
 
+		static::subObjectsFromFhir($fhir_object, $context);
+
+		$values = static::getFhirTemplate()->match($fhir_object, $warnings);
+		if (is_null($values)) {
+			throw new InvalidStructure("Failed to match object of type '{$fhir_type}': " . implode("; ", $warnings));
+		}
+
+		return static::fromFhirValues($values);
+	}
+
+	static protected function subObjectsFromFhir($fhir_object, FhirContext $context)
+	{
 		$fhir_type = static::getFhirType();
 		$schema = \Yii::app()->fhirMarshal->getSchema($fhir_type);
 
@@ -68,19 +81,12 @@ abstract class DataObject implements FhirCompatible
 
 			if (is_array($value)) {
 				foreach ($value as &$v) {
-					$v = $class::fromFhir($v);
+					$v = $class::fromFhir($v, $context);
 				}
 			} else {
-				$value = $class::fromFhir($value);
+				$value = $class::fromFhir($value, $context);
 			}
 		}
-
-		$values = static::getFhirTemplate()->match($fhir_object, $warnings);
-		if (is_null($values)) {
-			throw new InvalidStructure("Failed to match object of type '{$fhir_type}': " . implode("; ", $warnings));
-		}
-
-		return static::fromFhirValues($values);
 	}
 
 	static protected function getServiceClass($fhir_type)

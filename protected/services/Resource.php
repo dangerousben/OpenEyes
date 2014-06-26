@@ -49,7 +49,7 @@ abstract class Resource extends DataObject
 		return $url;
 	}
 
-	static public function fromFhir($fhirObject)
+	static public function fromFhir($fhirObject, FhirContext $context)
 	{
 		$resourceType = static::getFhirType();
 
@@ -57,7 +57,7 @@ abstract class Resource extends DataObject
 			throw new InvalidStructure("Expecting a resource of type '{$resourceType}', got '{$fhirObject->resourceType}'");
 		}
 
-		return parent::fromFhir($fhirObject);
+		return parent::fromFhir($fhirObject, $context);
 	}
 
 	protected $id = null;

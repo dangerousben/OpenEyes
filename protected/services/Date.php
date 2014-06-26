@@ -17,7 +17,7 @@ namespace services;
 
 class Date extends \DateTime implements FhirCompatible
 {
-	static public function fromFhir($value)
+	static public function fromFhir($value, FhirContext $context)
 	{
 		return new self($value);
 	}

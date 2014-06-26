@@ -15,46 +15,34 @@
 
 namespace services;
 
-class FhirBundle extends DataObject
+use Guzzle\Http\Url;
+
+class FhirContext
 {
 	/**
-	 * @param string $title
-	 * @param string $self_url
 	 * @param string $base_url
-	 * @param Resource[] $resources Indexed by URL
+	 * @return FhirContext
 	 */
-	static public function create($title, $self_url, $base_url, array $resources)
+	static public function create($base_url)
 	{
-		$bundle = new self(
-			array(
-				'title' => $title,
-				'id' => 'urn:uuid:' . \Helper::generateUuid(),
-				'self_url' => $self_url,
-				'base_url' => $base_url,
-				'updated' => date(DATE_ATOM),
-			)
-		);
-
-		foreach ($resources as $url => $resource) {
-			$bundle->entries[] = FhirBundleEntry::fromResource($url, $resource);
-		}
-
-		return $bundle;
+		return new self(Url::factory($base_url));
 	}
 
-	static protected function subObjectsFromFhir($fhir_object, FhirContext $context)
+	private $base_url;
+
+	public function __construct(Url $base_url)
 	{
-		if (isset($fhir_object->entry)) {
-			foreach ($fhir_object->entry as &$entry) {
-				$entry = FhirBundleEntry::fromFhir($entry, $context);
-			}
-		}
+		$this->base_url = $base_url;
 	}
 
-	public $title;
-	public $id;
-	public $self_url;
-	public $base_url;
-	public $updated;
-	public $entries = array();
+	/**
+	 * @param string $url
+	 * @return string
+	 */
+	public function canonicaliseUrl($url)
+	{
+		$url = Url::factory($url);
+		if (!$url->isAbsolute()) $url = $this->base_url->combine($url);
+		return "$url";
+	}
 }

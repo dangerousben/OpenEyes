@@ -24,9 +24,10 @@ interface FhirCompatible
 	 * Convert the given FHIR object into an instance of this class
 	 *
 	 * @param mixed $fhirObject
+	 * @param FhirContext $context
 	 * @return FhirCompatible
 	 */
-	static public function fromFhir($fhirObject);
+	static public function fromFhir($fhirObject, FhirContext $context);
 
 	/**
 	 * Convert this object to FHIR format

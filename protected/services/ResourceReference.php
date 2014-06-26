@@ -19,21 +19,24 @@ abstract class ResourceReference implements FhirCompatible
 {
 	/**
 	 * @param \StdClass $fhir_object
+	 * @param FhirContext $context
 	 * @return ResourceReference
 	 */
-	static public function fromFhir($fhir_object)
+	static public function fromFhir($fhir_object, FhirContext $context)
 	{
-		$url = $fhir_object->reference;
+		$url = $context->canonicaliseUrl($fhir_object->reference);
 
-		if (!preg_match('|^(.*)/(.+)$|', $url, $m)) {
-			throw new ProcessingNotSupported("Unsupported FHIR resource reference: {$url}");
+		if (($local_base = \Yii::app()->service->getLocalFhirBaseUrl()) &&
+			(preg_match('|^' . preg_quote($local_base) . '/(.*)/(.*)$|', $url, $m))) {
+
+			if (!($ref = \Yii::app()->service->fhirIdToReference($m[1], $m[2]))) {
+				throw new InvalidValue("Invalid local resource reference: {$url}");
+			}
+
+			return $ref;
+		} else {
+			return FhirReference::create($url);
 		}
-
-		if (!($ref = \Yii::app()->service->fhirIdToReference($m[1], $m[2]))) {
-			throw new InvalidValue("Invalid local resource reference: {$url}");
-		}
-
-		return $ref;
 	}
 
 	/**

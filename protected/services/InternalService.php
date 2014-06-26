@@ -151,6 +151,6 @@ abstract class InternalService implements Service
 	public function fhirToResource(\StdClass $fhirObject)
 	{
 		$class = $this->getResourceClass();
-		return $class::fromFhir($fhirObject);
+		return $class::fromFhir($fhirObject, FhirContext::create(\Yii::app()->service->getLocalFhirBaseUrl()));
 	}
 }

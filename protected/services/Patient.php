@@ -36,14 +36,14 @@ class Patient extends Resource
 
 		if (isset($values['care_providers'])) {
 			foreach ($values['care_providers'] as $ref) {
-				switch ($ref->getServiceName()) {
-					case 'Gp':
+				switch (get_class($ref)) {
+					case 'GpReference':
 						$values['gp_ref'] = $ref;
 						break;
-					case 'Practice':
+					case 'PracticeReference':
 						$values['prac_ref'] = $ref;
 						break;
-					case 'CommissioningBody':
+					case 'CommissioningBodyReference':
 						$values['cb_refs'][] = $ref;
 						break;
 				}

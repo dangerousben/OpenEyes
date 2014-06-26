@@ -15,46 +15,60 @@
 
 namespace services;
 
-class FhirBundle extends DataObject
+use Guzzle\Http\Client;
+
+/**
+ * External FHIR reference
+ */
+class FhirReference extends ResourceReference
 {
+	static public function create($url)
+	{
+		return new self(new Client($url), dirname(dirname($url)));
+	}
+
+	private $client;
+	private $base_url;
+
 	/**
-	 * @param string $title
-	 * @param string $self_url
-	 * @param string $base_url
-	 * @param Resource[] $resources Indexed by URL
+	 * @param Client $client
+	 * @param $base_url
 	 */
-	static public function create($title, $self_url, $base_url, array $resources)
+	public function __construct(Client $client, $base_url)
 	{
-		$bundle = new self(
-			array(
-				'title' => $title,
-				'id' => 'urn:uuid:' . \Helper::generateUuid(),
-				'self_url' => $self_url,
-				'base_url' => $base_url,
-				'updated' => date(DATE_ATOM),
-			)
-		);
-
-		foreach ($resources as $url => $resource) {
-			$bundle->entries[] = FhirBundleEntry::fromResource($url, $resource);
-		}
-
-		return $bundle;
+		$this->client = $client;
+		$this->base_url = $base_url;
 	}
 
-	static protected function subObjectsFromFhir($fhir_object, FhirContext $context)
+	/**
+	 * @return Resource
+	 */
+	public function fetch()
 	{
-		if (isset($fhir_object->entry)) {
-			foreach ($fhir_object->entry as &$entry) {
-				$entry = FhirBundleEntry::fromFhir($entry, $context);
-			}
-		}
+		$res = $this->client->get()->send();
+
+		$fhir_object = \Yii::app()->fhirMarshal->parseXml($res->getBody());
+		$resource_type = $fhir_object->resourceType;
+
+		// FIXME: need a sane way to map from FHIR resource types to service layer classes
+		$class = 'services\\' . $resource_type;
+
+		return $class::fromFhir($fhir_object, FhirContext::create($this->base_url));
 	}
 
-	public $title;
-	public $id;
-	public $self_url;
-	public $base_url;
-	public $updated;
-	public $entries = array();
+	public function getLastModified()
+	{
+	}
+
+	public function update(Resource $resource)
+	{
+	}
+
+	public function delete()
+	{
+	}
+
+	public function toFhir()
+	{
+	}
 }

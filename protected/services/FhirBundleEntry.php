@@ -36,6 +36,13 @@ class FhirBundleEntry extends DataObject
 		);
 	}
 
+	static protected function subObjectsFromFhir($fhir_object, FhirContext $context)
+	{
+		$content_type = $fhir_object->content->resourceType;
+		$class = static::getServiceClass($content_type);
+		$fhir_object->content = $class::fromFhir($fhir_object->content, $context);
+	}
+
 	public $title;
 	public $id;
 	public $updated;
